@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixel Dog Space Game</title>
+  <style>
+    body { margin: 0; background: black; overflow: hidden; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; background-color: black; }
+    #gauge {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 6px dashed rgba(0,255,0,0.5);
+      display: none;
+      z-index: 10;
+    }
+    #arrow {
+      position: absolute;
+      width: 2px;
+      height: 100px;
+      background: lime;
+      display: none;
+      transform-origin: bottom center;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="gauge"></div>
+<div id="arrow"></div>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// 픽셀 강아지 이미지
+let dogImg = new Image();
+dogImg.src = "dog_pixel.png";
+
+let dog = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  size: 64,
+  vx: 0,
+  vy: 0,
+  floatTime: 0
+};
+
+// 별들 랜덤 생성
+let stars = [];
+for (let i = 0; i < 100; i++) {
+  stars.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 2,
+    alpha: Math.random()
+  });
+}
+
+// 드래그 UI
+let dragging = false;
+let startX = 0, startY = 0, dragX = 0, dragY = 0;
+let arrow = document.getElementById("arrow");
+let gauge = document.getElementById("gauge");
+
+canvas.addEventListener("touchstart", e => {
+  let touch = e.touches[0];
+  startX = touch.clientX;
+  startY = touch.clientY;
+  dragging = true;
+  arrow.style.display = "block";
+  gauge.style.display = "block";
+}, false);
+
+canvas.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  let touch = e.touches[0];
+  dragX = touch.clientX - startX;
+  dragY = touch.clientY - startY;
+  let dist = Math.sqrt(dragX * dragX + dragY * dragY);
+  let angle = Math.atan2(-dragY, -dragX) * 180 / Math.PI;
+
+  arrow.style.height = Math.min(dist, 100) + "px";
+  arrow.style.top = (dog.y - arrow.offsetHeight) + "px";
+  arrow.style.left = (dog.x - 1) + "px";
+  arrow.style.transform = `translate(-1px, -100%) rotate(${angle}deg)`;
+}, false);
+
+canvas.addEventListener("touchend", e => {
+  if (dragging) {
+    dog.vx = -dragX / 10;
+    dog.vy = -dragY / 10;
+  }
+  dragging = false;
+  arrow.style.display = "none";
+  gauge.style.display = "none";
+}, false);
+
+// 게임 루프
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 별 반짝임
+  for (let star of stars) {
+    ctx.beginPath();
+    ctx.globalAlpha = star.alpha;
+    ctx.fillStyle = "white";
+    ctx.arc(star.x, star.y, star.r, 0, 2 * Math.PI);
+    ctx.fill();
+    star.alpha += (Math.random() - 0.5) * 0.1;
+    star.alpha = Math.max(0.1, Math.min(1, star.alpha));
+  }
+  ctx.globalAlpha = 1;
+
+  // 캐릭터 이동
+  dog.x += dog.vx;
+  dog.y += dog.vy;
+  dog.vx *= 0.98;
+  dog.vy *= 0.98;
+
+  // 캐릭터 흔들림
+  dog.floatTime += 0.05;
+  let offsetX = Math.sin(dog.floatTime) * 2;
+  let offsetY = Math.cos(dog.floatTime * 1.5) * 2;
+
+  // 캐릭터 그리기
+  ctx.drawImage(dogImg, dog.x - dog.size / 2 + offsetX, dog.y - dog.size / 2 + offsetY, dog.size, dog.size);
+
+  requestAnimationFrame(draw);
+}
+dogImg.onload = () => draw();
+</script>
+</body>
+</html>
